@@ -1,0 +1,15 @@
+{
+  "versionCode": 201,
+  "versionName": "2.0.0-beta",
+  "minSupportedVersionCode": 200,
+  "changelog": [
+    "首个公开版本：82 位使徒三层涂色板进度记录",
+    "战斗力公式还原与宠物派遣最优解",
+    "截图识图导入、存档导出与快照回滚",
+    "4 套皮肤 × 深浅色共 8 种配色"
+  ],
+  "downloadUrl": "",
+  "downloadCode": "",
+  "mirrorUrl": "",
+  "publishedAt": "2026-10-27"
+}
