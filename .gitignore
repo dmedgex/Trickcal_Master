@@ -1,0 +1,48 @@
+# ───────────── Android / Gradle ─────────────
+.gradle/
+.kotlin/
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+*.hprof
+
+# 构建产物
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# ───────────── 本机环境（含私有路径，不入库）─────────────
+# Android SDK 路径
+local.properties
+# 内含本机 JDK 路径（org.gradle.java.home），各自按自己的环境配置
+gradle.properties
+
+# ───────────── 签名与凭据 ─────────────
+*.jks
+*.keystore
+keystore.properties
+signing.properties
+
+# ───────────── IDE ─────────────
+.idea/
+*.iml
+.vscode/
+
+# ───────────── 本项目工具与临时产物 ─────────────
+# 本地数据编辑器（含 .backup 自动备份），仅维护数据时使用
+tools/editor/
+# 调试中间产物：截图、裁剪后的备份、一次性脚本
+WorkBuddyTemp/
+# 本地会话缓存（截图与导出，体积大）
+.workbuddy/
+
+# ───────────── Python ─────────────
+__pycache__/
+*.py[cod]
+
+# ───────────── 系统 ─────────────
+.DS_Store
+Thumbs.db
+desktop.ini

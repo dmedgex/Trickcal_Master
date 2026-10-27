@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">圣团长日记</string>
+    <string name="accessibility_desc">用于在游戏内自动滑动与切换属性页，完成涂色格子的识图导入。仅在识别过程中生效。</string>
+</resources>

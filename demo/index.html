@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#FBF7F2">
+<title>金蜡笔日记 · UI Demo</title>
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+<!-- 模拟手机外壳 -->
+<div class="stage">
+  <aside class="stage-side" id="stageSide">
+    <div class="stage-title">UI 原型 · 可点击</div>
+    <div class="stage-sub">数据来自 v1.1.5 真实存档</div>
+    <div class="stage-list" id="stageList"></div>
+  </aside>
+
+  <div class="device">
+    <div class="device-notch"></div>
+    <div class="device-screen" id="screen">
+      <!-- 状态栏 -->
+      <div class="statusbar">
+        <span class="sb-time" id="sbTime">9:41</span>
+        <span class="sb-icons">
+          <svg width="15" height="11" viewBox="0 0 15 11" fill="currentColor"><rect x="0" y="7" width="2.4" height="4" rx="1"/><rect x="3.6" y="5" width="2.4" height="6" rx="1"/><rect x="7.2" y="2.5" width="2.4" height="8.5" rx="1"/><rect x="10.8" y="0" width="2.4" height="11" rx="1"/></svg>
+          <svg width="15" height="11" viewBox="0 0 16 12" fill="currentColor"><path d="M8 10.5 6.2 8.7a2.6 2.6 0 0 1 3.6 0L8 10.5Zm0-3.9a5.2 5.2 0 0 0-3.7 1.5L3 6.8a7.1 7.1 0 0 1 10 0l-1.3 1.3A5.2 5.2 0 0 0 8 6.6Zm0-3.8c-2.5 0-4.8 1-6.5 2.6L.2 4.1A11 11 0 0 1 8 1.1c3 0 5.8 1.1 7.8 2.9l-1.3 1.3A9.2 9.2 0 0 0 8 2.8Z"/></svg>
+          <svg width="24" height="11" viewBox="0 0 25 12" fill="none"><rect x="0.6" y="0.6" width="20" height="10.8" rx="3" stroke="currentColor" stroke-opacity=".4"/><rect x="2.2" y="2.2" width="14" height="7.6" rx="1.8" fill="currentColor"/><path d="M22.4 4v4a2.4 2.4 0 0 0 0-4Z" fill="currentColor" fill-opacity=".45"/></svg>
+        </span>
+      </div>
+
+      <main class="viewport" id="viewport"><!-- 页面注入 --></main>
+
+      <nav class="tabbar" id="tabbar">
+        <button class="tab" data-tab="home">
+          <svg viewBox="0 0 24 24" class="tab-ico"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1v-9.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+          <span>首页</span>
+        </button>
+        <button class="tab" data-tab="apostle">
+          <svg viewBox="0 0 24 24" class="tab-ico"><circle cx="12" cy="8.5" r="3.6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4.8 20.5c.7-3.9 3.6-6.2 7.2-6.2s6.5 2.3 7.2 6.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <span>使徒</span>
+        </button>
+        <button class="tab" data-tab="stats">
+          <svg viewBox="0 0 24 24" class="tab-ico"><path d="M4 20h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><rect x="5.5" y="12" width="3.4" height="6" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.7"/><rect x="10.3" y="7.5" width="3.4" height="10.5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.7"/><rect x="15.1" y="4" width="3.4" height="14" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>
+          <span>统计</span>
+        </button>
+        <button class="tab" data-tab="me">
+          <svg viewBox="0 0 24 24" class="tab-ico"><circle cx="12" cy="12" r="8.4" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="10" r="2.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7.4 18c.6-2.5 2.4-3.8 4.6-3.8s4 1.3 4.6 3.8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          <span>我的</span>
+        </button>
+      </nav>
+    </div>
+  </div>
+</div>
+
+<!-- 通用弹层 -->
+<div class="sheet-backdrop" id="backdrop"></div>
+<div class="sheet" id="sheet"><div class="sheet-grip"></div><div class="sheet-body" id="sheetBody"></div></div>
+<div class="toast" id="toast"></div>
+
+<script src="./core.js"></script>
+<script src="./views1.js"></script>
+<script src="./views2.js"></script>
+<script src="./views2b.js"></script>
+<script src="./views3.js"></script>
+<script src="./views3b.js"></script>
+<script src="./views3c.js"></script>
+<script src="./views4.js"></script>
+<script src="./views5.js"></script>
+</body>
+</html>
