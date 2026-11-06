@@ -413,6 +413,7 @@ private val HOME_FEATURES = listOf(
     HomeFeature("battlepower", "战斗力计算", "战力换算 · 待接入", 0xFF6E8FCB, glyph = FuncGlyph.KEY_SWORD, badge = "规划", muted = true, toast = "战斗力计算 · 规划中"),
     HomeFeature("damage", "伤害计算", "BETA · 待接入", 0xFFFBEAE3, emoji = "💥", badge = "规划", muted = true, toast = "伤害计算 · 规划中"),
     HomeFeature("crayonimport", "蜡笔导入", "截图识别 · 自动写入进度", 0xFFEDF2F8, emoji = "🖼️", badge = "BETA", badgeIsNew = true, route = "crayonimport"),
+    HomeFeature("dice", "诡计骰子", "自动挂机 · 规划中", 0xFFFAEEDA, emoji = "🎲", badge = "规划", muted = true, toast = "诡计骰子 · 规划中"),
     HomeFeature("arena", "竞技场 auto", "手机自己在打竞技场", 0xFFF1EAFB, emoji = "🤖", badge = "规划", muted = true, toast = "竞技场 auto · 规划中"),
 )
 

@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "masks": 256,
+  "states": 756,
+  "categories": 8,
+  "keepRows": 1470,
+  "vectors": 126,
+  "bytes": 1602868,
+  "actkRawBytes": 66189312,
+  "actcRawBytes": 11031552
+}

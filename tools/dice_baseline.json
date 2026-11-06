@@ -1,0 +1,353 @@
+{
+ "baseWidth": 1280,
+ "baseHeight": 720,
+ "note": "由 tools/gen_dice_baseline.py 生成；Kotlin 侧 DiceVision 需逐字段一致",
+ "frames": [
+  {
+   "name": "anim6",
+   "width": 1280,
+   "height": 720,
+   "scene": "MATCH",
+   "isMyTurn": true,
+   "board": [
+    23,
+    122,
+    446,
+    685
+   ],
+   "occupancy": {
+    "TWOS": "FILLED",
+    "THREES": "EMPTY",
+    "FOURS": "EMPTY",
+    "FIVES": "OVERLAY",
+    "SIXES": "EMPTY",
+    "FULL_HOUSE": "FILLED",
+    "LARGE_STRAIGHT": "EMPTY",
+    "YACHT": "EMPTY"
+   },
+   "table": [],
+   "slots": [
+    {
+     "kind": "ORANGE",
+     "value": 6,
+     "x": 684,
+     "y": 125
+    },
+    {
+     "kind": "ORANGE",
+     "value": 6,
+     "x": 769,
+     "y": 125
+    },
+    {
+     "kind": "GREEN",
+     "value": 6,
+     "x": 853,
+     "y": 125
+    },
+    {
+     "kind": "ORANGE",
+     "value": 2,
+     "x": 938,
+     "y": 125
+    },
+    {
+     "kind": "ORANGE",
+     "value": 4,
+     "x": 1022,
+     "y": 125
+    }
+   ],
+   "round": [
+    4,
+    8
+   ]
+  },
+  {
+   "name": "exit_dialog",
+   "width": 1280,
+   "height": 720,
+   "scene": "DIALOG",
+   "isMyTurn": false,
+   "board": [
+    309,
+    104,
+    582,
+    611
+   ],
+   "occupancy": {}
+  },
+  {
+   "name": "main",
+   "width": 1280,
+   "height": 720,
+   "scene": "MAIN",
+   "isMyTurn": false,
+   "board": [
+    155,
+    91,
+    424,
+    607
+   ],
+   "occupancy": {}
+  },
+  {
+   "name": "panel",
+   "width": 1280,
+   "height": 720,
+   "scene": "MATCH",
+   "isMyTurn": true,
+   "board": [
+    23,
+    122,
+    446,
+    685
+   ],
+   "occupancy": {
+    "TWOS": "FILLED",
+    "THREES": "FILLED",
+    "FOURS": "FILLED",
+    "FIVES": "EMPTY",
+    "SIXES": "EMPTY",
+    "FULL_HOUSE": "EMPTY",
+    "LARGE_STRAIGHT": "FILLED",
+    "YACHT": "EMPTY"
+   },
+   "table": [
+    {
+     "kind": "ORANGE",
+     "value": 1,
+     "x": 732,
+     "y": 287
+    },
+    {
+     "kind": "ORANGE",
+     "value": 1,
+     "x": 723,
+     "y": 441
+    },
+    {
+     "kind": "GREEN",
+     "value": null,
+     "x": 854,
+     "y": 322
+    }
+   ],
+   "slots": [],
+   "round": [
+    3,
+    8
+   ]
+  },
+  {
+   "name": "partial_keep",
+   "width": 1280,
+   "height": 720,
+   "scene": "MATCH",
+   "isMyTurn": true,
+   "board": [
+    23,
+    122,
+    446,
+    685
+   ],
+   "occupancy": {
+    "TWOS": "FILLED",
+    "THREES": "FILLED",
+    "FOURS": "FILLED",
+    "FIVES": "FILLED",
+    "SIXES": "FILLED",
+    "FULL_HOUSE": "FILLED",
+    "LARGE_STRAIGHT": "FILLED",
+    "YACHT": "EMPTY"
+   },
+   "table": [
+    {
+     "kind": "ORANGE",
+     "value": 2,
+     "x": 707,
+     "y": 379
+    },
+    {
+     "kind": "ORANGE",
+     "value": 5,
+     "x": 867,
+     "y": 379
+    },
+    {
+     "kind": "ORANGE",
+     "value": 6,
+     "x": 947,
+     "y": 379
+    },
+    {
+     "kind": "GREEN",
+     "value": 4,
+     "x": 787,
+     "y": 369
+    }
+   ],
+   "slots": [
+    {
+     "kind": "ORANGE",
+     "value": 4,
+     "x": 684,
+     "y": 125
+    }
+   ],
+   "round": [
+    8,
+    8
+   ]
+  },
+  {
+   "name": "recon_match",
+   "width": 1280,
+   "height": 720,
+   "scene": "UNKNOWN",
+   "isMyTurn": false,
+   "board": [
+    39,
+    128,
+    461,
+    691
+   ],
+   "occupancy": {},
+   "note": "人工调色帧（识图调试用），非真实游戏画面；期望判 UNKNOWN，不作骰子基准"
+  },
+  {
+   "name": "result",
+   "width": 1280,
+   "height": 720,
+   "scene": "RESULT",
+   "isMyTurn": false,
+   "board": [
+    473,
+    165,
+    582,
+    610
+   ],
+   "occupancy": {}
+  },
+  {
+   "name": "settled",
+   "width": 1280,
+   "height": 720,
+   "scene": "MATCH",
+   "isMyTurn": true,
+   "board": [
+    23,
+    122,
+    446,
+    685
+   ],
+   "occupancy": {
+    "TWOS": "FILLED",
+    "THREES": "FILLED",
+    "FOURS": "FILLED",
+    "FIVES": "FILLED",
+    "SIXES": "FILLED",
+    "FULL_HOUSE": "FILLED",
+    "LARGE_STRAIGHT": "EMPTY",
+    "YACHT": "EMPTY"
+   },
+   "table": [
+    {
+     "kind": "ORANGE",
+     "value": 4,
+     "x": 907,
+     "y": 371
+    },
+    {
+     "kind": "ORANGE",
+     "value": 1,
+     "x": 667,
+     "y": 379
+    },
+    {
+     "kind": "ORANGE",
+     "value": 1,
+     "x": 747,
+     "y": 379
+    },
+    {
+     "kind": "ORANGE",
+     "value": 4,
+     "x": 827,
+     "y": 379
+    },
+    {
+     "kind": "GREEN",
+     "value": 6,
+     "x": 987,
+     "y": 369
+    }
+   ],
+   "slots": [],
+   "round": [
+    7,
+    8
+   ]
+  },
+  {
+   "name": "settled2",
+   "width": 1280,
+   "height": 720,
+   "scene": "MATCH",
+   "isMyTurn": true,
+   "board": [
+    23,
+    122,
+    446,
+    685
+   ],
+   "occupancy": {
+    "TWOS": "EMPTY",
+    "THREES": "OVERLAY",
+    "FOURS": "EMPTY",
+    "FIVES": "EMPTY",
+    "SIXES": "FILLED",
+    "FULL_HOUSE": "EMPTY",
+    "LARGE_STRAIGHT": "EMPTY",
+    "YACHT": "EMPTY"
+   },
+   "table": [
+    {
+     "kind": "ORANGE",
+     "value": 4,
+     "x": 907,
+     "y": 371
+    },
+    {
+     "kind": "ORANGE",
+     "value": 3,
+     "x": 747,
+     "y": 374
+    },
+    {
+     "kind": "ORANGE",
+     "value": 3,
+     "x": 667,
+     "y": 379
+    },
+    {
+     "kind": "ORANGE",
+     "value": 4,
+     "x": 827,
+     "y": 379
+    },
+    {
+     "kind": "GREEN",
+     "value": 6,
+     "x": 987,
+     "y": 369
+    }
+   ],
+   "slots": [],
+   "round": [
+    2,
+    8
+   ]
+  }
+ ]
+}
