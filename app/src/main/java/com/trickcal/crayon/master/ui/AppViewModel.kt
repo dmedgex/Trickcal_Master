@@ -1,10 +1,15 @@
 package com.trickcal.crayon.master.ui
 
 import android.app.Application
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.trickcal.crayon.master.BuildConfig
 import com.trickcal.crayon.master.data.BackupEntry
 import com.trickcal.crayon.master.data.GameData
 import com.trickcal.crayon.master.data.GameDataLoader
@@ -17,6 +22,12 @@ import com.trickcal.crayon.master.domain.PdOutcome
 import com.trickcal.crayon.master.domain.PetDispatchSolver
 import com.trickcal.crayon.master.domain.QuickPaintTarget
 import com.trickcal.crayon.master.ui.theme.AppSkin
+import com.trickcal.crayon.master.update.UpdateChecker
+import com.trickcal.crayon.master.update.UpdateInfo
+import com.trickcal.crayon.master.update.UpdateResult
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -35,6 +46,9 @@ enum class ThemeMode(val label: String) {
 }
 
 data class BatchPreview(val charCount: Int, val slotCount: Int, val ids: List<String>)
+
+/** 待展示的更新弹窗数据；[force] 由清单的 minSupportedVersionCode 推导而来。 */
+data class UpdatePrompt(val info: UpdateInfo, val force: Boolean)
 
 /** 一键涂色的动作类型（对齐旧版 BatchPaintAction）。 */
 enum class BatchAction(
@@ -105,9 +119,17 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     var toast by mutableStateOf<String?>(null)
         private set
 
+    /** 检查更新是否进行中，用于按钮防重入。 */
+    var checkingUpdate by mutableStateOf(false)
+        private set
+
+    /** 非 null 时展示更新弹窗。 */
+    var updatePrompt by mutableStateOf<UpdatePrompt?>(null)
+        private set
+
     init {
         val snap = store.load()
-        lit = if (snap.initialized) snap.lit else demoProgress()
+        lit = if (snap.initialized) snap.lit else emptySet()
         selectedPets = snap.selectedPetIds.ifEmpty {
             data.pets.take(14).map { it.id }.toSet()
         }
@@ -449,12 +471,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         showToast("已清空涂色进度")
     }
 
-    fun loadDemoProgress() {
-        lit = demoProgress()
-        persist()
-        showToast("已载入示例进度")
-    }
-
     fun exportJson(): String {
         val litArr = JSONArray()
         lit.forEach { litArr.put(it) }
@@ -498,7 +514,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 ?: return@runCatching false
             val incoming = HashSet<String>()
             for (i in 0 until litArr.length()) incoming.add(litArr.getString(i))
-            val valid = incoming.filter { data.slotById.containsKey(it) }.toSet()
+            // 新版 ID 直接命中；旧版 ID（角色_层名_属性_层内序号）按层内顺序换算后命中
+            val valid = incoming.mapNotNull { id ->
+                if (data.slotById.containsKey(id)) id else legacySlotId(id)
+            }.toSet()
             lit = valid
 
             val pd = modules?.optJSONObject("petDispatch")?.optJSONObject("data")
@@ -521,6 +540,42 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }.getOrDefault(false)
     }
 
+    /**
+     * 旧版存档的格子 ID 形如 `ed_first_attack_0`：
+     * 层用枚举名（first/second/third）、末段是「该层第几个可涂格」而不是行列坐标。
+     * 新版是 `ed_1_attack_2-1`。两边棋盘行数据逐格一致，因此按层内顺序即可精确还原。
+     */
+    private fun legacySlotId(raw: String): String? {
+        val parts = raw.split('_')
+        if (parts.size < 4) return null
+        val order = parts.last().toIntOrNull() ?: return null
+        // 属性名可能是两段：CRIT_RESIST 小写后是 crit_resist，不能按单段切
+        val body = parts.dropLast(1)
+        val attrKey: String
+        val rest: List<String>
+        if (body.size >= 2 && body[body.size - 1] == "resist" && body[body.size - 2] == "crit") {
+            attrKey = "crit_resist"
+            rest = body.dropLast(2)
+        } else {
+            attrKey = body.last()
+            rest = body.dropLast(1)
+        }
+        if (rest.size < 2) return null
+        val tierKey = rest.last()
+        val charId = rest.dropLast(1).joinToString("_")
+        val tier = when (tierKey) {
+            "first" -> 1
+            "second" -> 2
+            "third" -> 3
+            else -> return null
+        }
+        val layer = data.characterById[charId]?.layerOf(tier) ?: return null
+        val cell = layer.slots.getOrNull(order) ?: return null
+        // 属性必须对得上，防止数据版本不同导致错位点亮
+        if (cell.attr?.name?.lowercase() != attrKey) return null
+        return cell.slotId
+    }
+
     private fun applySnapshot(snap: SaveSnapshot) {
         lit = snap.lit
         selectedPets = snap.selectedPetIds
@@ -528,6 +583,40 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         taskCount = snap.taskCount
         overrides = snap.overrides
         store.save(snap.copy(initialized = true))
+    }
+
+    // ---------- 检查更新 ----------
+
+    /**
+     * 只有用户点「检查更新」才会走到这里，不做启动静默检查、不做后台轮询。
+     * 联通性交给 [UpdateChecker]，失败只提示原因，不弹更新弹窗。
+     */
+    fun checkUpdate() {
+        if (checkingUpdate) return
+        checkingUpdate = true
+        viewModelScope.launch {
+            val result = withContext(Dispatchers.IO) { UpdateChecker.check(VERSION_CODE) }
+            checkingUpdate = false
+            when (result) {
+                is UpdateResult.Available -> updatePrompt = UpdatePrompt(result.info, result.force)
+                UpdateResult.Latest -> showToast("已是最新版本")
+                is UpdateResult.Failed -> showToast("检查更新失败：${result.reason}")
+            }
+        }
+    }
+
+    fun dismissUpdate() {
+        updatePrompt = null
+    }
+
+    /** 提取码、下载链接都走这里，避免调用方各自处理剪贴板异常。 */
+    fun copyText(text: String, label: String) {
+        if (text.isBlank()) return
+        runCatching {
+            val cm = getApplication<Application>()
+                .getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            cm.setPrimaryClip(ClipData.newPlainText(label, text))
+        }
     }
 
     fun showToast(message: String) {
@@ -538,20 +627,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         toast = null
     }
 
-    private fun demoProgress(): Set<String> = runCatching {
-        val text = getApplication<Application>().assets
-            .open("data/demo_progress.json").bufferedReader().use { it.readText() }
-        val arr = JSONObject(text).getJSONArray("lit")
-        val out = HashSet<String>(arr.length())
-        for (i in 0 until arr.length()) out.add(arr.getString(i))
-        out.retainAll { data.slotById.containsKey(it) }
-        out
-    }.getOrElse { emptySet() }
-
     private fun taskKey(regionName: String, taskId: Int): String = "$regionName#$taskId"
 
     companion object {
-        /** 版本号唯一来源，与 app/build.gradle.kts 的 versionName 保持一致。 */
-        const val VERSION_NAME = "2.0.0-beta"
+        /** 版本号唯一来源：直接读构建产物，不再和 build.gradle.kts 手抄对齐。 */
+        val VERSION_NAME: String = BuildConfig.VERSION_NAME
+        val VERSION_CODE: Int = BuildConfig.VERSION_CODE
     }
 }

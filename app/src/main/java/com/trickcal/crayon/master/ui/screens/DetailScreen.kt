@@ -1,9 +1,11 @@
 package com.trickcal.crayon.master.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,7 +13,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -21,7 +25,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -33,12 +36,10 @@ import com.trickcal.crayon.master.data.Layer
 import com.trickcal.crayon.master.data.Tier
 import com.trickcal.crayon.master.domain.BoardEngine
 import com.trickcal.crayon.master.ui.AppViewModel
-import com.trickcal.crayon.master.ui.components.BackButton
 import com.trickcal.crayon.master.ui.components.AssetImage
-import com.trickcal.crayon.master.ui.components.PageColumn
+import com.trickcal.crayon.master.ui.components.BackButton
 import com.trickcal.crayon.master.ui.components.TagPill
 import com.trickcal.crayon.master.ui.components.TcCard
-import com.trickcal.crayon.master.ui.components.darkenFilter
 import com.trickcal.crayon.master.ui.theme.Tc
 import kotlin.math.roundToInt
 
@@ -59,11 +60,16 @@ fun DetailScreen(vm: AppViewModel, charId: String, onBack: () -> Unit) {
     val tierInfo = Tier.byN(layer?.tier ?: 1)
     val layerStat = stats.firstOrNull { it.tier == layer?.tier }
 
-    PageColumn {
+    // 固定一屏布局：卡片与棋盘各自吃掉剩余空间，任何分辨率下都不会产生滚动
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .padding(horizontal = 20.dp),
+    ) {
         Spacer(Modifier.height(10.dp))
         BackButton(label = "使徒", onClick = onBack)
 
-        // .detail-hero{padding:6px 0 20px} gap 15
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(top = 6.dp, bottom = 20.dp),
@@ -99,7 +105,6 @@ fun DetailScreen(vm: AppViewModel, charId: String, onBack: () -> Unit) {
             }
         }
 
-        // .tierseg{gap:8px;margin-bottom:14px} 44dp 高、圆角 14、选中品牌底白字
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             Tier.ALL.forEachIndexed { index, t ->
                 val on = index == tierIndex
@@ -131,7 +136,9 @@ fun DetailScreen(vm: AppViewModel, charId: String, onBack: () -> Unit) {
                 padding = 15.dp,
                 shape = RoundedCornerShape(22.dp),
                 elevation = 1.dp,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -172,28 +179,49 @@ fun DetailScreen(vm: AppViewModel, charId: String, onBack: () -> Unit) {
                         )
                     }
                 }
-                Spacer(Modifier.height(13.dp))
-                BoardGrid(vm, ch, layer)
-                Spacer(Modifier.height(13.dp))
+                Spacer(Modifier.height(10.dp))
+                // 棋盘按「卡片剩余宽高」实时定尺寸：取高度与宽度的较小约束，铺满即止
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        val gap = 3.dp
+                        val rows = layer.rows.size.coerceAtLeast(1)
+                        val cols = layer.width.coerceAtLeast(1)
+                        // 留 2dp 余量 + 向下取整到整 dp：宁可棋盘略小，也不让最后一行被父约束压缩
+                        val availH = (maxHeight - 2.dp).coerceAtLeast(1.dp)
+                        val raw = minOf(
+                            (maxWidth - gap * (cols - 1)) / cols,
+                            (availH - gap * (rows - 1)) / rows,
+                        )
+                        val cell = kotlin.math.floor(raw.value).toInt().dp.coerceIn(1.dp, 64.dp)
+                        BoardGrid(vm, layer, cell, gap)
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
                 Text(
-                    text = "点击格子逐格涂色；未点亮的格子显示为灰色。",
+                    text = "点击彩色格子逐格涂色；点亮后描金边。",
                     fontSize = 9.5.sp,
                     color = Tc.colors.ink3,
                 )
             }
         }
+        Spacer(Modifier.height(18.dp))
     }
 }
 
-/** .board：30dp 方格、3dp 间距、整体居中。 */
+/** 棋盘：格子边长与间距由外部按可用空间给定。 */
 @Composable
-private fun BoardGrid(vm: AppViewModel, ch: Character, layer: Layer) {
+private fun BoardGrid(vm: AppViewModel, layer: Layer, cell: Dp, gap: Dp) {
     Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(gap)) {
             for (ri in 0 until layer.rows.size) {
-                Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
                     for (ci in 0 until layer.width) {
-                        BoardCell(vm, layer, ri, ci, 30.dp)
+                        BoardCell(vm, layer, ri, ci, cell)
                     }
                 }
             }
@@ -205,54 +233,65 @@ private fun BoardGrid(vm: AppViewModel, ch: Character, layer: Layer) {
 private fun BoardCell(vm: AppViewModel, layer: Layer, row: Int, col: Int, size: Dp) {
     val cell = layer.cellAt(row, col)
     val shape = RoundedCornerShape(5.dp)
-    val base = Modifier.size(size).clip(shape)
+    // requiredSize：无视父级剩余高度，保证每格永远是长宽相等的正方形，不会被压扁
+    val base = Modifier.requiredSize(size).clip(shape)
+
+    if (cell == null || cell.sym == '.') {
+        Box(base)
+        return
+    }
 
     when {
-        cell == null || cell.sym == '.' -> Box(base)
         cell.attr != null -> {
             val on = cell.slotId?.let { vm.lit.contains(it) } == true
             Box(
                 modifier = base
                     .background(Tc.colors.surface2)
-                    .padding(2.dp)
+                    .border(
+                        width = if (on) 2.dp else 0.dp,
+                        color = if (on) Tc.colors.gold else Color.Transparent,
+                        shape = shape,
+                    )
                     .clickable { cell.slotId?.let { vm.toggleSlot(it) } },
+                contentAlignment = Alignment.Center,
             ) {
+                // 属性格始终显示素材原色，保证 0/N 时也能靠颜色分辨属性；点亮只加金色描边
                 AssetImage(
                     path = "cells/${cell.attr?.imgName}.webp",
                     contentDescription = cell.attr?.label,
                     modifier = Modifier.fillMaxSize(),
-                    colorFilter = if (on) null else darkenFilter(0.50f),
+                    contentScale = ContentScale.FillBounds,
                 )
             }
         }
         cell.purple != null -> Box(
-            modifier = base.background(Color(0xFFEFE7FA)).padding(2.dp),
+            modifier = base.background(Color(0xFFEFE7FA)),
+            contentAlignment = Alignment.Center,
         ) {
             AssetImage(
                 path = "cells/cell_purple_${cell.purple?.name?.lowercase()}.webp",
                 modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.FillBounds,
                 alpha = 0.55f,
             )
         }
+        cell.sym == 'W' -> Box(base, contentAlignment = Alignment.Center) {
+            AssetImage(
+                path = "cells/cell_white.webp",
+                contentDescription = "路径",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.FillBounds,
+            )
+        }
+        // 起点 / 终点：只显示图标本体，不加底色块
         cell.sym == 'S' || cell.sym == 'E' -> {
             val start = cell.sym == 'S'
-            Box(
-                modifier = base.background(
-                    Brush.linearGradient(
-                        if (start) {
-                            listOf(Color(0xFF7BC08D), Color(0xFF5FA875))
-                        } else {
-                            listOf(Color(0xFFE88572), Color(0xFFCE6455))
-                        },
-                    ),
-                ),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = if (start) "起" else "终",
-                    fontSize = (size.value * 0.36f).sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = Color.White,
+            Box(base, contentAlignment = Alignment.Center) {
+                AssetImage(
+                    path = if (start) "cells/cell_start.webp" else "cells/cell_end.webp",
+                    contentDescription = if (start) "起点" else "终点",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.FillBounds,
                 )
             }
         }

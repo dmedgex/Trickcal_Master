@@ -1,0 +1,15 @@
+{
+  "versionCode": 202,
+  "versionName": "0.2-beta",
+  "minSupportedVersionCode": 200,
+  "changelog": [
+    "新增使徒-波朗",
+    "新增宠物-嫩芽雪兔,迷你舒胖,迷你乔安等6只",
+    "大概修复好了旧app存档导入的问题",
+    "优化涂色板显示界面，修复了格子图标显示错误的问题"
+  ],
+  "downloadUrl": "",
+  "downloadCode": "",
+  "mirrorUrl": "",
+  "publishedAt": "2026-10-27"
+}

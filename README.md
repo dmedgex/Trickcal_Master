@@ -2,7 +2,7 @@
 
 《嘟嘟脸恶作剧》（Trickcal）的第三方离线进度管理工具。用 Kotlin + Jetpack Compose 写的 Android App，记录 82 位使徒三层涂色板的点亮情况，并顺带算战斗力、排宠物派遣。
 
-**全程离线**：数据全部内置在 `assets/`，不联网、不上传、不要账号。
+**数据全内置**：进度、数值与资源文件都在 `assets/`，不联网、不上传、不要账号。唯一的网络请求是「我的 → 检查更新」，只在主动点击时读取仓库根目录的一份静态版本清单。
 
 <p align="center">
   <img src="docs/screenshots/home.png" width="175" alt="首页">
@@ -52,7 +52,7 @@
 | 蜡笔导入（识图） | 读取涂色板截图，用中文 OCR + OpenCV 自动识别每张卡的勾选状态 |
 | 静态识图 | 纯本地图片识别，不走截屏与无障碍，适合导入相册里的截图 |
 | 存档中心 | 进度导出 / 导入 JSON、自动快照回滚 |
-| 我的 | 主题切换、数据来源、关于与版权声明 |
+| 我的 | 主题切换、检查更新、数据来源、关于与版权声明 |
 
 **主题**：4 套皮肤（暖橙 / 薄荷绿 / 海盐蓝 / 暮光紫）× 深浅色（跟随系统 / 浅色 / 深色），共 8 套配色。
 
@@ -113,7 +113,7 @@ kotlin.code.style=official
 | 项 | 值 |
 |---|---|
 | applicationId | `com.trickcal.crayon.master` |
-| versionName | `2.0.0-beta`（versionCode 201） |
+| versionName | `0.2-beta`（versionCode 202） |
 | minSdk / targetSdk / compileSdk | 26 / 36 / 36 |
 | AGP / Kotlin / Gradle | 8.12.3 / 2.0.21 / 8.13 |
 | ABI | `arm64-v8a`、`x86_64` |
@@ -136,6 +136,7 @@ kotlin.code.style=official
 ├── app/src/test/          # DomainTest（棋盘、战力、派遣的纯 JVM 测试）
 ├── demo/                  # HTML 原型：视觉与交互的唯一规格来源
 ├── docs/screenshots/      # README 用截图
+├── update/                # 版本清单 version.json（检查更新读取，不参与 APK 打包）
 └── 涂色板识别算法-技术需求.md   # 识图算法的完整规格书
 ```
 
@@ -178,6 +179,7 @@ python -m http.server 8791
 - `battlepower.json` 的系数在源数据里是字符串，原型的 JS 直接相加会退化成字符串拼接导致 `NaN`；App 侧统一按数值解析。
 - 截图识图分辨率敏感：只接受游戏渲染尺寸（按高度缩放到 720）的截图，带模拟器边框或控制栏的图坐标会失效。算法细节见 [`涂色板识别算法-技术需求.md`](涂色板识别算法-技术需求.md)。
 - 目前只出 debug 构建（调试签名）。正式分发需在 `app/build.gradle.kts` 补 `signingConfigs` 与 release keystore。
+- 「检查更新」读仓库根 `update/version.json`，发新版本时该文件的 `versionCode` 必须与 `build.gradle.kts` 同步递增，否则客户端查不到更新；`downloadUrl` 为空时弹窗只显示更新内容、不出现下载按钮。
 - 原型里的装饰性元素（手机外壳、左侧导航、`#/xxx` 深链）不进入 App。
 
 ## 版权与免责

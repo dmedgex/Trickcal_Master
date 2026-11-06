@@ -100,8 +100,8 @@ class ImportOverlay(private val context: Context) {
                 WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             PixelFormat.TRANSLUCENT,
         ).apply {
-            gravity = Gravity.TOP or Gravity.START
-            x = dp(8)
+            gravity = Gravity.TOP or Gravity.END
+            x = dp(8)   // 距右边 8dp：悬浮窗默认停在右上角，避开左侧属性栏和顶部标题
             y = dp(8)
         }
         params = lp

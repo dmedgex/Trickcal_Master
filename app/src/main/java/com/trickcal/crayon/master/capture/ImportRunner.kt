@@ -79,8 +79,16 @@ class ImportRunner(
             return
         }
 
-        val w = context.resources.displayMetrics.widthPixels
-        val h = context.resources.displayMetrics.heightPixels
+        // 必须用「物理屏幕的横屏尺寸」，与 ScreenCaptureService 的截图尺寸保持一致。
+        // 之前用 resources.displayMetrics（app 自身竖屏 720×1280），而截图是横屏 1280×720，
+        // 宽高正好相反 —— 所有 w*0.08 / h*0.86 这类计算全部错位，
+        // 滑动终点会超出屏幕高度（y>720），点击也点不到左侧栏。
+        val dm = android.util.DisplayMetrics()
+        @Suppress("DEPRECATION")
+        (context.getSystemService(android.content.Context.WINDOW_SERVICE) as android.view.WindowManager)
+            .defaultDisplay.getRealMetrics(dm)
+        val w = maxOf(dm.widthPixels, dm.heightPixels)
+        val h = minOf(dm.widthPixels, dm.heightPixels)
 
         for (attr in targets) {
             if (cancelled) break
@@ -99,7 +107,28 @@ class ImportRunner(
             } else {
                 log("点击「${attr.label}」")
             }
-            delay(1000)
+            delay(900)
+
+            // 闭环验证：读右上角标题确认真的切到了目标属性页
+            val probe = capture.snapshot()
+            val shown = probe?.let { readTitleAttr(it) }
+            // 不要立即 recycle：InputImage.fromBitmap 内部仍持有该 bitmap，
+            // 回收后再被 ML Kit 访问会直接崩溃（真机实测闪退）。
+            // 交给 GC 处理，一张 720p 位图不值得冒这个风险。
+            if (shown != attr) {
+                log("⚠ 切换后标题显示「${shown?.label ?: "未识别"}」，重试一次")
+                tapAttrByText(attr, w, h)
+                delay(900)
+                val probe2 = capture.snapshot()
+                val shown2 = probe2?.let { readTitleAttr(it) }
+                // 同上，不立即 recycle
+                if (shown2 != attr) {
+                    log("重试仍未切到「${attr.label}」，跳过该属性")
+                    continue
+                }
+            } else {
+                log("已确认当前页：${attr.label}")
+            }
 
             var totalCards = 0
             var totalCells = 0
@@ -203,7 +232,8 @@ class ImportRunner(
                         "（行距 ${rowStep.toInt()}×3）" +
                         if (startY - endY < stepPx - 1f) " 终点被截断" else "",
                 )
-                swipeHoldAndWait(w * 0.72f, startY, w * 0.72f, endY, 900, 1000)
+                val swiped = swipeHoldAndWait(w * 0.72f, startY, w * 0.72f, endY, 900, 1000)
+                if (!swiped) log("⚠ 滑动手势未发起（无障碍服务未就绪或被系统拦截）")
                 delay(250)
             }
         }
@@ -223,13 +253,11 @@ class ImportRunner(
         y2: Float,
         moveMs: Long,
         holdMs: Long,
-    ) {
-        kotlinx.coroutines.suspendCancellableCoroutine<Unit> { cont ->
-            val ok = TapService.swipeHold(x1, y1, x2, y2, moveMs, holdMs) {
-                if (cont.isActive) cont.resumeWith(Result.success(Unit))
-            }
-            if (!ok && cont.isActive) cont.resumeWith(Result.success(Unit))
+    ): Boolean = kotlinx.coroutines.suspendCancellableCoroutine { cont ->
+        val ok = TapService.swipeHold(x1, y1, x2, y2, moveMs, holdMs) {
+            if (cont.isActive) cont.resumeWith(Result.success(true))
         }
+        if (!ok && cont.isActive) cont.resumeWith(Result.success(false))
     }
 
     private suspend fun ocrCardName(bmp: Bitmap, r: BoardScanner.CardRect, k: Float): String? {
@@ -279,6 +307,28 @@ class ImportRunner(
      * 用 OCR 找到左侧栏里目标属性的文字并点击它的中心。
      * 映射：HP→生命值、攻击力→攻击力、暴击→「暴击与暴击伤害」、暴击抗性→「暴击抗性与暴击伤害抗性」、防御力→防御力。
      */
+    /**
+     * 读右上角的面板标题，确定当前是哪个属性页（「攻击力  388%」这类文字）。
+     * 这是判断属性页唯一明确、无歧义的来源，不需要任何像素分析。
+     */
+    private suspend fun readTitleAttr(bmp: Bitmap): Attr? {
+        return try {
+            val text = recognizer.process(InputImage.fromBitmap(bmp, 0)).await()
+            val lines = text.textBlocks.flatMap { it.lines }
+            val w = bmp.width
+            val h = bmp.height
+            lines.firstOrNull { line ->
+                val box = line.boundingBox ?: return@firstOrNull false
+                box.centerX() > w * 0.30f && box.centerY() < h * 0.30f &&
+                    attrOfText(line.text) != null
+            }?.let { attrOfText(it.text) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Throwable) {
+            null
+        }
+    }
+
     private suspend fun tapAttrByText(attr: Attr, w: Int, h: Int): Boolean {
         val capture = ScreenCaptureService.instance ?: return false
         val bmp = capture.snapshot() ?: return false
@@ -313,13 +363,17 @@ class ImportRunner(
     private fun tapAttrByIcon(attr: Attr, w: Int, h: Int): Boolean {
         val capture = ScreenCaptureService.instance ?: return false
         val bmp = capture.snapshot() ?: return false
-        val ix1 = maxOf(4, (w * 0.09f).toInt())
-        val px = IntArray(ix1 * h)
-        bmp.getPixels(px, 0, ix1, 0, 0, ix1, h)
+        // 必须用位图真实尺寸：截屏已改为物理横屏尺寸，调用方传入的 w/h 可能是旧值，
+        // 直接按其分配数组会 getPixels 越界崩溃（y + height must be <= bitmap.height）。
+        val bh = bmp.height
+        val bw = bmp.width
+        val ix1 = maxOf(4, (bw * 0.09f).toInt()).coerceAtMost(bw)
+        val px = IntArray(ix1 * bh)
+        bmp.getPixels(px, 0, ix1, 0, 0, ix1, bh)
         bmp.recycle()
 
-        val deep = IntArray(h)
-        for (y in 0 until h) {
+        val deep = IntArray(bh)
+        for (y in 0 until bh) {
             var cnt = 0
             val base = y * ix1
             for (x in 0 until ix1) {
@@ -333,8 +387,8 @@ class ImportRunner(
         }
         val centers = ArrayList<Int>(8)
         var segStart = -1
-        for (y in 0..h) {
-            val thick = y < h && deep[y] > 15
+        for (y in 0..bh) {
+            val thick = y < bh && deep[y] > 15
             if (thick) {
                 if (segStart < 0) segStart = y
             } else {
@@ -350,7 +404,7 @@ class ImportRunner(
             Attr.DEFENSE -> 5
         }
         val cy = centers.getOrNull(index) ?: return false
-        TapService.tap(w * 0.06f, cy.toFloat())
+        TapService.tap(bw * 0.06f, cy.toFloat())
         return true
     }
 

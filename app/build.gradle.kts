@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
 
 plugins {
     id("com.android.application")
@@ -10,12 +11,30 @@ android {
     namespace = "com.trickcal.crayon.master"
     compileSdk = 36
 
+    // 正式包签名材料不入库：keystore.properties 与 keystore/ 都在 .gitignore 内。
+    // 别人克隆后没有这两样，release 会退化成未签名包，但 debug 构建不受影响。
+    val keystorePropsFile = rootProject.file("keystore.properties")
+    val keystoreProps = Properties().apply {
+        if (keystorePropsFile.exists()) keystorePropsFile.inputStream().use { load(it) }
+    }
+
+    signingConfigs {
+        if (keystorePropsFile.exists()) {
+            create("release") {
+                storeFile = rootProject.file(keystoreProps.getProperty("storeFile"))
+                storePassword = keystoreProps.getProperty("storePassword")
+                keyAlias = keystoreProps.getProperty("keyAlias")
+                keyPassword = keystoreProps.getProperty("keyPassword")
+            }
+        }
+    }
+
     defaultConfig {
         applicationId = "com.trickcal.crayon.master"
         minSdk = 26
         targetSdk = 36
-        versionCode = 201
-        versionName = "2.0.0-beta"
+        versionCode = 202
+        versionName = "0.2-beta"
         vectorDrawables { useSupportLibrary = true }
         ndk {
             // 只保留真机主力架构 arm64-v8a 与 64 位模拟器架构 x86_64。
@@ -31,6 +50,8 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            // 没有 keystore.properties 时为 null，产物是未签名包 —— 明确可见，不静默降级。
+            signingConfig = signingConfigs.findByName("release")
         }
     }
 
@@ -39,7 +60,12 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        // AGP 8 默认关闭 BuildConfig 生成；AppViewModel 要从 BuildConfig 读版本号，
+        // 不开这一项会直接编译不过。
+        buildConfig = true
+    }
 
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"

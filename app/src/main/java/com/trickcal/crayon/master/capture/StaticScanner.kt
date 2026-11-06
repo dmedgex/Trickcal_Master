@@ -149,13 +149,37 @@ class StaticScanner(private val knownNames: List<String>) {
      * 再比较各自右侧背景的亮度——选中项背后是深绿胶囊，明显更暗。
      * 全程只用文字位置，不依赖任何像素比例，换分辨率也不会错位。
      */
+    /**
+     * 判断当前是哪个属性页。
+     *
+     * **首选：直接读面板标题**。界面在右上角有醒目的标题文字（如「攻击力  388%」），
+     * OCR 本来就能读到它，这是唯一明确、无歧义的属性来源 —— 不需要任何像素分析，
+     * 也不需要判断左侧栏哪个高亮（那套「绿色胶囊占比」是给旧方案打的补丁，太绕且易错）。
+     *
+     * 判定条件：位于画面右上区域（x > 30% 宽、y < 30% 高）且文本含属性词的 OCR 行。
+     *
+     * 兜底：万一标题没被 OCR 读到，再退回左侧栏的高亮判定。
+     */
     private fun detectAttrByText(bitmap: Bitmap, lines: List<com.google.mlkit.vision.text.Text.Line>): Attr? {
         val w = bitmap.width
         val h = bitmap.height
+
+        // 1) 标题优先
+        val title = lines.firstOrNull { line ->
+            val box = line.boundingBox ?: return@firstOrNull false
+            box.centerX() > w * 0.30f && box.centerY() < h * 0.30f &&
+                attrOfText(line.text) != null
+        }
+        title?.let {
+            val a = attrOfText(it.text)
+            android.util.Log.d("StaticScan", "标题属性 '${it.text}' → $a")
+            if (a != null) return a
+        }
+
+        // 2) 兜底：左侧栏高亮（深绿胶囊占比最高者）
         val cands = mutableListOf<Pair<Attr, Rect>>()
         lines.forEach { line ->
             val box = line.boundingBox ?: return@forEach
-            // 属性词条都在左侧栏
             if (box.centerX() > w * 0.35f) return@forEach
             if (box.width() > w * 0.32f) return@forEach
             val a = attrOfText(line.text) ?: return@forEach
@@ -163,64 +187,31 @@ class StaticScanner(private val knownNames: List<String>) {
         }
         if (cands.size < 3) return null
 
-        var best: Attr? = null
-        var bestSpan = -1
-        var secondSpan = -1
-        cands.forEach { (a, box) ->
-            val span = darkGreenSpanOf(bitmap, box, w, h)
-            if (span > bestSpan) {
-                secondSpan = bestSpan
-                bestSpan = span
-                best = a
-            } else if (span > secondSpan) {
-                secondSpan = span
-            }
-        }
-        // 选中行的深绿胶囊横向很长（图标一直延到文字末尾），未选中行只有图标圆
-        if (bestSpan - secondSpan < 30) {
-            android.util.Log.d("StaticScan", "attrByText 区分度不足 best=$bestSpan second=$secondSpan")
-            return null
-        }
-        android.util.Log.d("StaticScan", "attrByText cands=${cands.size} span=$bestSpan -> $best")
-        return best
+        val scored = cands.map { (a, box) -> a to selectionScore(bitmap, box) }
+            .sortedByDescending { it.second }
+        val best = scored[0]
+        val second = scored.getOrNull(1)
+        android.util.Log.d(
+            "StaticScan",
+            "兜底-左栏 " + scored.joinToString(" ") { "${it.first}=${"%.3f".format(it.second)}" },
+        )
+        return if (second == null || best.second >= second.second * 2.5 + 0.01) best.first else null
     }
 
-    /**
-     * 与该文字同一水平线上，深绿（胶囊色）像素的横向跨度。
-     * 选中行的胶囊从图标一直延伸到文字末尾，跨度很长；未选中行只有图标那个圆，跨度很短。
-     * 用跨度而不是占比：图标本身也是深绿，会让各行占比被拉平。
-     */
-    private fun darkGreenSpanOf(bmp: Bitmap, box: Rect, w: Int, h: Int): Int {
-        val x0 = (w * 0.02f).toInt().coerceIn(0, w - 1)
-        val x1 = (box.right + (w * 0.035f).toInt()).coerceIn(x0 + 1, w)
-        val cy = box.centerY().coerceIn(2, h - 3)
-        val pw = x1 - x0
-        val ph = 5
-        val y0 = cy - 2
-        val px = IntArray(pw * ph)
-        bmp.getPixels(px, 0, pw, x0, y0, pw, ph)
-
-        var minX = -1
-        var maxX = -1
-        for (col in 0 until pw) {
-            var hit = false
-            for (row in 0 until ph) {
-                val c = px[row * pw + col]
-                val r = (c shr 16) and 0xFF
-                val g = (c shr 8) and 0xFF
-                val b = c and 0xFF
-                val v = maxOf(r, maxOf(g, b))
-                if (g > r + 15 && g > b + 15 && v < 160) {
-                    hit = true
-                    break
-                }
-            }
-            if (hit) {
-                if (minX < 0) minX = col
-                maxX = col
-            }
+    /** 兜底用：文字框内「深绿胶囊像素」占比（选中项是深绿底，未选中是浅绿背景） */
+    private fun selectionScore(bmp: Bitmap, box: Rect): Double {
+        val cw = box.width().coerceAtLeast(2)
+        val ch = box.height().coerceAtLeast(2)
+        val px = IntArray(cw * ch)
+        bmp.getPixels(px, 0, cw, box.left, box.top, cw, ch)
+        var deep = 0
+        for (p in px) {
+            val r = (p shr 16) and 0xFF
+            val g = (p shr 8) and 0xFF
+            val b = p and 0xFF
+            if (g in 90..184 && g > r + 20 && g > b + 25) deep++
         }
-        return if (minX >= 0) maxX - minX else 0
+        return deep.toDouble() / px.size.coerceAtLeast(1)
     }
 
     /** 文本 → 属性。注意「暴击抗性…」含「暴击」，必须先判抗性。 */
@@ -394,7 +385,6 @@ class StaticScanner(private val knownNames: List<String>) {
 
     /** 已知名字里取编辑距离最近的，容忍 OCR 少量错字。 */
     private fun matchName(raw: String): String? = NameMatcher.match(raw, knownNames)
-
 
     private suspend fun <T> Task<T>.await(): T = suspendCancellableCoroutine { cont ->
         addOnSuccessListener { cont.resume(it) }

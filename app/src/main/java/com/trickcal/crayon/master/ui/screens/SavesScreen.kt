@@ -192,32 +192,18 @@ fun SavesScreen(vm: AppViewModel, onBack: () -> Unit) {
         Spacer(Modifier.height(16.dp))
         Text("危险操作", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Tc.colors.ink)
         Spacer(Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(
-                text = "载入示例进度",
-                fontSize = 11.sp,
-                color = Tc.colors.ink2,
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(Tc.colors.surface2)
-                    .clickable { pending = DangerAction.LOAD_DEMO }
-                    .padding(vertical = 10.dp),
-                textAlign = TextAlign.Center,
-            )
-            Text(
-                text = "清空涂色进度",
-                fontSize = 11.sp,
-                color = Tc.colors.warn,
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(Tc.colors.warn.copy(alpha = 0.12f))
-                    .clickable { pending = DangerAction.CLEAR }
-                    .padding(vertical = 10.dp),
-                textAlign = TextAlign.Center,
-            )
-        }
+        Text(
+            text = "清空涂色进度",
+            fontSize = 11.sp,
+            color = Tc.colors.warn,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(10.dp))
+                .background(Tc.colors.warn.copy(alpha = 0.12f))
+                .clickable { pending = DangerAction.CLEAR }
+                .padding(vertical = 10.dp),
+            textAlign = TextAlign.Center,
+        )
     }
 
     val action = pending
@@ -228,17 +214,14 @@ fun SavesScreen(vm: AppViewModel, onBack: () -> Unit) {
             onDismiss = { pending = null },
             onConfirm = {
                 pending = null
-                when (action) {
-                    DangerAction.LOAD_DEMO -> vm.loadDemoProgress()
-                    DangerAction.CLEAR -> vm.clearProgress()
-                }
+                vm.clearProgress()
             },
         )
     }
 }
 
 /** 危险操作二次确认：明确标注这是调试功能。 */
-private enum class DangerAction { LOAD_DEMO, CLEAR }
+private enum class DangerAction { CLEAR }
 
 @Composable
 private fun DangerConfirmDialog(
@@ -247,13 +230,12 @@ private fun DangerConfirmDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
-    val loadDemo = action == DangerAction.LOAD_DEMO
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = Tc.colors.surface,
         title = {
             Text(
-                text = if (loadDemo) "载入示例进度" else "清空涂色进度",
+                text = "清空涂色进度",
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
                 color = Tc.colors.ink,
@@ -262,16 +244,12 @@ private fun DangerConfirmDialog(
         text = {
             Column {
                 TagPill(
-                    text = "调试功能",
+                    text = "不可撤销",
                     color = Tc.colors.warn,
                     background = Tc.colors.warn.copy(alpha = 0.14f),
                 )
                 Text(
-                    text = if (loadDemo) {
-                        "仅用于演示与自测，不是正式功能。载入后当前涂色进度会立即被示例数据覆盖，无法撤销。"
-                    } else {
-                        "仅用于演示与自测，不是正式功能。清空后当前全部涂色进度都会丢失，无法撤销。"
-                    },
+                    text = "清空后当前全部涂色进度都会丢失，无法撤销。",
                     fontSize = 11.5.sp,
                     color = Tc.colors.ink2,
                     lineHeight = 17.sp,
@@ -289,8 +267,8 @@ private fun DangerConfirmDialog(
         confirmButton = {
             TextButton(onClick = onConfirm) {
                 Text(
-                    text = if (loadDemo) "仍要载入" else "仍要清空",
-                    color = if (loadDemo) Tc.colors.brand else Tc.colors.warn,
+                    text = "仍要清空",
+                    color = Tc.colors.warn,
                 )
             }
         },
